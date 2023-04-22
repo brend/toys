@@ -1,46 +1,50 @@
-local dfa = {}
+dfa = {}
+
+local noOp <const> = function () end
 
 function dfa.new()
     return {
         start = nil,
         currentState = nil,
         states = {},
-        transitions = {},
         makeTransition = function (self)
-            return function (origin, transitionLabel)
-                print(dfa.tostring(self) .. " transition from " .. tostring(origin) .. " using \"" .. tostring(transitionLabel) .. "\"")
-                local destinationLabel = self.transitions[origin.label][transitionLabel]
+            return function (origin, destinationLabel)
                 local destination = self.states[destinationLabel]
 
+                if not destination then
+                    print("unknown destination label: " .. tostring(destinationLabel))
+                    return
+                end
+
                 self.currentState = destination
-                destination:enter()
+                destination:enter(self.userInfo)
             end
-        end        
+        end,
+        userInfo = {}
     }
 end
 
-function dfa.addState(self, label, update)
-
+function dfa.addState(self, label, update, enter)
     if label then
-        local state = {}
+        local state <const> = {}
 
         state.label = label
         state.transition = self:makeTransition()
-        state.update = (type(update) == "function") and update or function () end
-        state.enter = function () print("entering state " .. tostring(label)) end
+
+        -- if "update" is a table, 
+        -- arguments "update" and "enter" are expected 
+        -- to be fields of that table
+        if type(update) == "table" then
+            local t <const> = update
+
+            update = t.update
+            enter = t.enter
+        end
+
+        state.update = (type(update) == "function") and update or noOp
+        state.enter = (type(enter) == "function") and enter or noOp
 
         self.states[label] = state
-    end
-end
-
-function dfa.addTransition(self, labelOrigin, transition, labelDestination)
-    local transitionsFromOrigin = self.transitions[labelOrigin]
-    local transitions = transitionsFromOrigin or {}
-
-    transitions[transition] = labelDestination
-
-    if not transitionsFromOrigin then
-        self.transitions[labelOrigin] = transitions
     end
 end
 
@@ -68,7 +72,7 @@ function dfa.update(self)
     local state = self.currentState
 
     if state then
-        state:update()
+        state:update(self.userInfo)
     end
 end
 
