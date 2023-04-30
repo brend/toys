@@ -20,6 +20,12 @@ function dfa.new()
                 destination:enter(self.userInfo)
             end
         end,
+        makeLoadScene = function (self)
+            return function (state, sceneName)
+                self.finished = true
+                self.nextScene = sceneName
+            end
+        end,
         userInfo = {}
     }
 end
@@ -30,6 +36,7 @@ function dfa.addState(self, label, update, enter)
 
         state.label = label
         state.transition = self:makeTransition()
+        state.loadScene = self:makeLoadScene()
 
         -- if "update" is a table, 
         -- arguments "update" and "enter" are expected 
@@ -65,7 +72,7 @@ function dfa.run(self)
 
     self.currentState = start
 
-    start:enter()
+    start:enter(self.userInfo)
 end
 
 function dfa.update(self)
